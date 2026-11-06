@@ -1,0 +1,492 @@
+-- Lazygit opens in a Snacks float; apply the force-black bg override
+-- (light/dark toggles: <leader>lqfg / <leader>lqfG) at open time. On
+-- secnight the float follows the editor bg instead (see lazygit_theme).
+local function lazygit_opts()
+  local lazygit_theme = require 'secvim.helpers.lazygit_theme'
+  -- zindex 70 keeps lazygit above the SecAI/secterm floats (chips top out at
+  -- 60), so a pinned panel can't bleed over the full-screen lazygit window.
+  return { win = { zindex = 70, wo = { winhighlight = lazygit_theme.float_winhl() } } }
+end
+
+local function pick_tabs()
+  local current = vim.fn.tabpagenr()
+  local items = {}
+  for i = 1, vim.fn.tabpagenr '$' do
+    local wins = vim.fn.tabpagebuflist(i)
+    local buf = wins[1]
+    local name = vim.api.nvim_buf_get_name(buf)
+    name = name ~= '' and vim.fn.fnamemodify(name, ':t') or '[No Name]'
+    local prefix = i == current and '%' or ' '
+    items[#items + 1] = {
+      idx = i,
+      text = string.format('%s %d: %s', prefix, i, name),
+      file = vim.api.nvim_buf_get_name(buf),
+      buf = buf,
+    }
+  end
+  Snacks.picker {
+    title = 'Tabs',
+    items = items,
+    format = function(item)
+      return { { item.text } }
+    end,
+    confirm = function(picker, item)
+      picker:close()
+      if item then
+        vim.cmd('tabn ' .. item.idx)
+      end
+    end,
+  }
+end
+
+return {
+  -- Tab Buffers (filtered by current tab)
+  { '<leader>tf', pick_tabs, desc = 'Tab Buffers' },
+  { '<leader>st', pick_tabs, desc = 'Tab Buffers' },
+  { '<leader>fw', pick_tabs, desc = 'Tab Buffers' },
+
+  -- Top Pickers & Explorer
+  {
+    '<leader>fs',
+    function()
+      Snacks.picker.smart()
+    end,
+    desc = 'Smart Find Files',
+  },
+  {
+    '<leader><cr>',
+    function()
+      Snacks.picker.smart()
+    end,
+    desc = 'Smart Find Files',
+  },
+  {
+    '<leader><space>',
+    function()
+      require('secvim.helpers.picker').files()
+    end,
+    desc = 'Find Files',
+  },
+  {
+    '<leader>:',
+    function()
+      Snacks.picker.command_history()
+    end,
+    desc = 'Command History',
+  },
+  {
+    '<leader>N',
+    function()
+      Snacks.picker.notifications()
+    end,
+    desc = 'Notification History',
+  },
+  {
+    '<leader>e',
+    function()
+      require('secvim.helpers.explorer').smart()
+    end,
+    desc = 'Explorer: Focus/Toggle',
+  },
+
+  -- Find
+  {
+    '<leader>fc',
+    function()
+      Snacks.picker.files { cwd = vim.fn.stdpath 'config' }
+    end,
+    desc = 'Find Config File',
+  },
+  {
+    '<leader>ff',
+    function()
+      require('secvim.helpers.picker').files()
+    end,
+    desc = 'Find Files',
+  },
+  {
+    '<leader>fb',
+    function()
+      Snacks.picker.buffers()
+    end,
+    desc = 'Find Buffers',
+  },
+  {
+    '<leader>fg',
+    function()
+      require('secvim.helpers.picker').git_files()
+    end,
+    desc = 'Find Git Files',
+  },
+  {
+    '<leader>fr',
+    function()
+      require('secvim.helpers.picker').recent()
+    end,
+    desc = 'Recent',
+  },
+
+  -- Todo Comments
+  {
+    '<leader>ftt',
+    function()
+      Snacks.picker.todo_comments()
+    end,
+    desc = 'Todo Comments',
+  },
+  {
+    '<leader>ftf',
+    function()
+      Snacks.picker.todo_comments { keywords = { 'FIX', 'FIXME' } }
+    end,
+    desc = 'Find Fix/Fixme',
+  },
+  {
+    '<leader>fte',
+    function()
+      Snacks.picker.todo_comments { keywords = { 'TODO' } }
+    end,
+    desc = 'Find Todo',
+  },
+  {
+    '<leader>ftn',
+    function()
+      Snacks.picker.todo_comments { keywords = { 'NOTE' } }
+    end,
+    desc = 'Find Note',
+  },
+  {
+    '<leader>fti',
+    function()
+      Snacks.picker.todo_comments { keywords = { 'INFO' } }
+    end,
+    desc = 'Find Info',
+  },
+  {
+    '<leader>fth',
+    function()
+      Snacks.picker.todo_comments { keywords = { 'HACK' } }
+    end,
+    desc = 'Find Hack',
+  },
+  {
+    '<leader>ftw',
+    function()
+      Snacks.picker.todo_comments { keywords = { 'WARN' } }
+    end,
+    desc = 'Find Warn',
+  },
+
+  -- Git
+  {
+    '<leader>gb',
+    function()
+      Snacks.picker.git_branches()
+    end,
+    desc = 'Git Branches',
+  },
+  {
+    '<leader>gl',
+    function()
+      Snacks.git.blame_line()
+    end,
+    desc = 'Git Blame Line',
+  },
+  {
+    '<leader>gc',
+    function()
+      Snacks.lazygit.log(lazygit_opts())
+    end,
+    desc = 'Git Log',
+  },
+  {
+    '<leader>gL',
+    function()
+      Snacks.picker.git_log_line()
+    end,
+    desc = 'Git Log Line',
+  },
+  {
+    '<leader>gs',
+    function()
+      Snacks.picker.git_status()
+    end,
+    desc = 'Git Status',
+  },
+  {
+    '<leader>gS',
+    function()
+      Snacks.picker.git_stash()
+    end,
+    desc = 'Git Stash',
+  },
+  {
+    '<leader>gd',
+    function()
+      Snacks.picker.git_diff()
+    end,
+    desc = 'Git Diff (Hunks)',
+  },
+  {
+    '<leader>gf',
+    function()
+      Snacks.picker.git_log_file()
+    end,
+    desc = 'Git Log File',
+  },
+  {
+    '<leader>gg',
+    function()
+      Snacks.lazygit.open(lazygit_opts())
+    end,
+    desc = 'Lazygit',
+  },
+  {
+    '<leader>gr',
+    function()
+      require('secvim.sec_plugins.secai.review').toggle_git()
+    end,
+    desc = 'Git Review',
+  },
+
+  -- Grep
+  {
+    '<leader>sb',
+    function()
+      Snacks.picker.grep_buffers()
+    end,
+    desc = 'Grep Buffers',
+  },
+  {
+    '<leader>sg',
+    function()
+      Snacks.picker.grep()
+    end,
+    desc = 'Grep',
+  },
+  {
+    '<leader>sw',
+    function()
+      Snacks.picker.grep_word()
+    end,
+    desc = 'Visual selection or word',
+    mode = { 'n', 'x' },
+  },
+
+  -- Search
+  {
+    '<leader>s/',
+    function()
+      Snacks.picker.search_history()
+    end,
+    desc = 'Search History',
+  },
+  {
+    '<leader>sa',
+    function()
+      Snacks.picker.autocmds()
+    end,
+    desc = 'Autocmds',
+  },
+  {
+    '<leader>/',
+    function()
+      Snacks.picker.lines()
+    end,
+    desc = 'Buffer Lines',
+  },
+  {
+    '<leader>sc',
+    function()
+      Snacks.picker.command_history()
+    end,
+    desc = 'Command History',
+  },
+  {
+    '<leader>sC',
+    function()
+      Snacks.picker.commands()
+    end,
+    desc = 'Commands',
+  },
+  {
+    '<leader>sd',
+    function()
+      Snacks.picker.diagnostics()
+    end,
+    desc = 'Diagnostics',
+  },
+  {
+    '<leader>sD',
+    function()
+      Snacks.picker.diagnostics_buffer()
+    end,
+    desc = 'Buffer Diagnostics',
+  },
+  {
+    '<leader>sH',
+    function()
+      Snacks.picker.help()
+    end,
+    desc = 'Help Pages',
+  },
+  {
+    '<leader>sh',
+    function()
+      Snacks.picker.highlights()
+    end,
+    desc = 'Highlights',
+  },
+  {
+    '<leader>si',
+    function()
+      Snacks.picker.icons()
+    end,
+    desc = 'Icons',
+  },
+  {
+    '<leader>sj',
+    function()
+      Snacks.picker.jumps()
+    end,
+    desc = 'Jumps',
+  },
+  {
+    '<leader>sk',
+    function()
+      Snacks.picker.keymaps()
+    end,
+    desc = 'Keymaps',
+  },
+  {
+    '<leader>sl',
+    function()
+      Snacks.picker.loclist()
+    end,
+    desc = 'Location List',
+  },
+  {
+    '<leader>sm',
+    function()
+      Snacks.picker.marks()
+    end,
+    desc = 'Marks',
+  },
+  {
+    '<leader>sM',
+    function()
+      Snacks.picker.man()
+    end,
+    desc = 'Man Pages',
+  },
+  {
+    '<leader>sp',
+    function()
+      Snacks.picker.lazy()
+    end,
+    desc = 'Search for Plugin Spec',
+  },
+  {
+    '<leader>sR',
+    function()
+      Snacks.picker.qflist()
+    end,
+    desc = 'Quickfix List',
+  },
+  {
+    '<leader>sq',
+    function()
+      Snacks.picker.registers()
+    end,
+    desc = 'Search Registers',
+  },
+  {
+    '<leader>su',
+    function()
+      Snacks.picker.undo()
+    end,
+    desc = 'Undo History',
+  },
+  -- LSP
+  {
+    'gd',
+    function()
+      Snacks.picker.lsp_definitions()
+    end,
+    desc = 'Goto Definition',
+  },
+  {
+    'gD',
+    function()
+      Snacks.picker.lsp_declarations()
+    end,
+    desc = 'Goto Declaration',
+  },
+  {
+    'gr',
+    function()
+      Snacks.picker.lsp_references()
+    end,
+    nowait = true,
+    desc = 'References',
+  },
+  {
+    '<leader>sr',
+    function()
+      Snacks.picker.lsp_references()
+    end,
+    nowait = true,
+    desc = 'LSP References',
+  },
+  {
+    'gI',
+    function()
+      Snacks.picker.lsp_implementations()
+    end,
+    desc = 'Goto Implementation',
+  },
+  {
+    'gy',
+    function()
+      Snacks.picker.lsp_type_definitions()
+    end,
+    desc = 'Goto T[y]pe Definition',
+  },
+  {
+    '<leader>ss',
+    function()
+      Snacks.picker.lsp_symbols()
+    end,
+    desc = 'LSP Symbols',
+  },
+  {
+    '<leader>sS',
+    function()
+      Snacks.picker.lsp_workspace_symbols()
+    end,
+    desc = 'LSP Workspace Symbols',
+  },
+
+  -- Misc
+  {
+    '<leader>;',
+    function()
+      Snacks.dashboard()
+    end,
+    desc = 'Dashboard',
+  },
+  {
+    '<leader>.',
+    function()
+      Snacks.notifier.hide()
+    end,
+    desc = 'Dimiss Notification',
+  },
+  {
+    '<leader>R',
+    function()
+      Snacks.rename.rename_file()
+    end,
+    desc = 'Rename Current File',
+  },
+}

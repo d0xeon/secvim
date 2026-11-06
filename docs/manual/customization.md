@@ -1,0 +1,335 @@
+# Customization Guide
+
+Secvim is designed to be extended. This guide covers themes, appearance, and how to make Secvim your own.
+
+## Table of Contents
+
+- [Themes](#themes)
+- [Dark & Light Mode](#dark--light-mode)
+- [Transparency](#transparency)
+- [Directories (Projects & Obsidian)](#directories-projects--obsidian)
+- [Statusline](#statusline)
+- [Dashboard](#dashboard)
+- [Adding Plugins](#adding-plugins)
+- [Overriding Options](#overriding-options)
+- [Custom Keybindings](#custom-keybindings)
+- [Custom Snippets](#custom-snippets)
+- [Custom Filetypes](#custom-filetypes)
+
+---
+
+## Themes
+
+Secvim ships with two custom built-in themes, both fully integrated with the dark/light toggle, transparency, and Secvim's overrides:
+
+| Theme | Style | Description |
+|:------|:------|:------------|
+| **Secmin** (default) | Minimal | Clean, distraction-free, inspired by min-theme |
+| **Secvintage** | Warm | Earthy aesthetic with rich, warm tones |
+| **Secnight** | Monochrome | Minimalist OLED-black night theme — cool white/grey ramp, no saturated colors |
+
+Sources live in `lua/secvim/sec_themes/` so you can tweak palettes directly. Other themes (anything provided by LazyVim) can still be picked from the picker, but they won't share Secvim's overrides.
+
+### Switching Themes
+
+**Live preview:**
+```
+<leader>lqs → Opens the theme picker with live preview
+```
+
+**Your selection is persisted automatically.** Secvim caches your choice and restores it on next launch.
+
+---
+
+## Dark & Light Mode
+
+Toggle between dark and light backgrounds:
+
+```
+<leader>lqt → Toggle dark/light mode
+```
+
+The background mode is cached, your preference is remembered across sessions.
+
+Most included themes support both dark and light variants. The toggle switches the `vim.o.background` setting, and the active theme adapts accordingly.
+
+---
+
+## Transparency
+
+Enable a transparent background to let your terminal wallpaper show through:
+
+```
+<leader>lqe → Toggle transparent mode
+```
+
+When enabled, Secvim removes the background color from the Normal, NormalFloat, and other highlight groups, making the editor blend with your terminal.
+
+This setting is also cached across sessions.
+
+> Secvim also persists UI toggles (statusline, indent, spell, etc.) across sessions. See the **[Toggles](toggles.md)** guide for details.
+
+---
+
+## Directories (Projects & Obsidian)
+
+Project directories and Obsidian vaults are managed dynamically through **Secdirs**, a built-in sec_plugin. Instead of hardcoding paths in `projects.lua` or `obsidian.lua`, you add and remove them at runtime through a popup menu, and the choices are persisted on disk.
+
+### Opening the menu
+
+```
+<leader>lp → Secdirs: Manage Projects & Obsidian
+```
+
+The menu mirrors the style of other sec_plugins (`<leader>xx`, `<leader>nn`, ...). It shows the current counts and lets you:
+
+| Key | Action |
+|:----|:-------|
+| `a` | Add project directory (supports `~/path/*` for subfolders as projects) |
+| `d` | Remove project directory (Snacks picker over all entries) |
+| `c` | Clear all project directories |
+| `A` | Add Obsidian vault path |
+| `D` | Remove Obsidian vault |
+| `C` | Clear all Obsidian vaults |
+| `X` | Clear EVERYTHING (projects + obsidian) |
+| `q` / `<Esc>` | Close the menu |
+
+### How it works
+
+- The configuration lives at `~/.local/share/nvim/secdirs/config.json`.
+- `lua/secvim/plugins/editor/projects.lua` reads `projects` from Secdirs at plugin load.
+- `lua/secvim/plugins/editor/obsidian.lua` reads `obsidian` and only loads the plugin if at least one vault is configured. Each vault becomes a workspace whose name is the folder basename.
+- The Snacks dashboard "Projects" and "Obsidian" buttons read the same list, so if you have nothing configured they tell you to open `<leader>lp`.
+
+### Applying changes
+
+Secdirs applies changes live whenever it can:
+
+- **Projects** — updates `neovim-project`'s in-memory config immediately. The next `:NeovimProjectDiscover` (or dashboard "Projects" button) shows the new list without a restart.
+- **Obsidian** — if `obsidian.nvim` is already loaded, Secdirs calls `Workspace.setup` with the new vault list so the active session updates on the spot. The exception is the **first** vault you add after starting Neovim with an empty config: the plugin was skipped at startup (`cond = false`), so a restart is required to load it. The notification tells you when that's the case.
+
+### Project path syntax
+
+Secdirs stores paths exactly as you type them. To match every subfolder of a parent as a separate project (the `coffebar/neovim-project` glob convention), end the path with `/*`:
+
+```
+~/Developer/Projects/*        → every immediate subfolder is a project
+~/Developer/Projects/Sandbox  → the folder itself is a single project
+```
+
+Obsidian vault paths must be literal directories (no globs).
+
+---
+
+## Statusline
+
+Secvim uses **lualine.nvim** with a custom configuration showing:
+
+- **Mode indicator** — current Vim mode
+- **File info** — filename, modification status, readonly flag
+- **Git info** — branch name, added/modified/removed counts (via gitsigns)
+- **Diagnostics** — error/warning/info counts from LSP
+- **LSP status** — active language servers
+- **Copilot status** — AI assistant state
+- **Position** — line and column
+
+### Toggle Statusline
+
+```
+<leader>ll → Show/hide the statusline
+```
+
+### Toggle Lualine Theme
+
+Switch between the custom default theme and Lualine's `auto` theme (which follows your theme):
+
+```
+<leader>lql → Toggle between Default and Auto theme
+```
+
+This setting is persisted across sessions via the toggles system.
+
+### Customizing
+
+Edit `lua/secvim/plugins/ui/lualine/init.lua` to modify sections, separators, or add your own components.
+
+---
+
+## Dashboard
+
+The Secvim dashboard (powered by snacks.nvim) appears when you open Neovim without a file. It shows:
+
+- ASCII art header
+- Quick access menu (Projects, Files, Recent, etc.)
+- Recent files
+
+### Open Dashboard Anytime
+
+```
+<leader>; → Return to dashboard
+```
+
+### Dashboard Gif (chafa)
+
+The dashboard can render an animated image via `chafa`. **It ships disabled by default** — toggle it on with `<leader>lqdt`. The active gif and its dimensions are persisted as toggles, so you can swap and resize without editing `dashboard.lua`. All three actions hot-reload — no restart required.
+
+| Key | Action |
+|:----|:-------|
+| `<leader>lqdt` | Toggle the gif on/off |
+| `<leader>lqds` | Picker over `lua/secvim/plugins/ui/dashboard_img/` — choose any `.gif`, `.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp` |
+| `<leader>lqdc` | Popup showing the current height/width/indent — pick `h`, `w`, or `i` to edit just one |
+
+How the hot-reload works: the terminal section is defined as a function so it's re-evaluated on every render, and after each change Secvim calls `Snacks.dashboard.update()`. Cache is disabled (`ttl = 0`) so dimension changes show immediately.
+
+Add new images by dropping files into `lua/secvim/plugins/ui/dashboard_img/` and selecting them with `<leader>lqds`. Each gif may need its own height/width/indent — adjust with `<leader>lqdc` after switching.
+
+---
+
+## Adding Plugins
+
+Secvim uses Lazy.nvim. To add a new plugin:
+
+### 1. Create a Plugin Spec
+
+Create a new Lua file in the appropriate plugin category directory:
+
+```
+lua/secvim/plugins/
+├── ai/          → AI tools
+├── coding/      → Code editing
+├── editor/      → Navigation, terminals, files
+├── env/         → LSP, formatters, linters, debug
+├── language/    → Language-specific
+├── test/        → Testing
+└── ui/          → Visual and UI
+```
+
+Example — adding a new plugin (`lua/secvim/plugins/editor/my-plugin.lua`):
+
+```lua
+return {
+  "author/my-plugin.nvim",
+  event = "BufReadPost", -- lazy-load on file open
+  opts = {
+    -- plugin options
+  },
+  keys = {
+    { "<leader>mp", "<cmd>MyPluginCommand<cr>", desc = "My Plugin" },
+  },
+}
+```
+
+### 2. Sync
+
+Restart Neovim or run:
+```
+<leader>Ls → Lazy sync
+```
+
+### Plugin Loading Strategies
+
+| Event | When |
+|:------|:-----|
+| `VeryLazy` | After UI is loaded |
+| `BufReadPost` | When a file is opened |
+| `InsertEnter` | When entering insert mode |
+| `CmdlineEnter` | When opening the command line |
+| `ft = "python"` | Only for specific filetypes |
+| `keys = { ... }` | Only when a keybinding is pressed |
+| `cmd = "Command"` | Only when a command is run |
+
+---
+
+## Overriding Options
+
+Neovim options are set in `lua/secvim/config/options.lua`. Common settings you might want to change:
+
+```lua
+-- Tab width
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
+
+-- Line numbers
+vim.opt.number = true
+vim.opt.relativenumber = true
+
+-- Scroll offset
+vim.opt.scrolloff = 8
+
+-- Search
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+```
+
+---
+
+## Custom Keybindings
+
+Global keybindings live in `lua/secvim/config/keybinds.lua`. To add your own:
+
+```lua
+vim.keymap.set("n", "<leader>xx", "<cmd>SomeCommand<cr>", {
+  desc = "Description for which-key",
+  noremap = true,
+  silent = true,
+})
+```
+
+### Per-Plugin Keybindings
+
+Most plugins define their keys in their spec file using the `keys` table. This also serves as a lazy-loading trigger:
+
+```lua
+return {
+  "plugin/name",
+  keys = {
+    { "<leader>xx", "<cmd>PluginCmd<cr>", desc = "Do something" },
+    { "<leader>xy", function() require("plugin").action() end, desc = "Another action" },
+  },
+}
+```
+
+---
+
+## Custom Snippets
+
+Custom snippets live in `snippets/` at the root of the config — browse, create and edit them interactively with **Secsnippets** (`<leader>lo`), or edit the files directly, as VSCode-format JSON files named after the filetype (e.g. `snippets/python.json`). Expansion is handled by Neovim's native `vim.snippet` — no snippet engine plugin needed. While a snippet is active, `<Tab>` / `<S-Tab>` jump between placeholders.
+
+```json
+{
+  "Main guard": {
+    "prefix": "main",
+    "description": "if __name__ == \"__main__\" block",
+    "body": ["if __name__ == \"__main__\":", "\t${1:pass}"]
+  }
+}
+```
+
+The creation wizard offers per-language starter presets (functions, classes, loops, React hooks, …); save your own with `t` in the Secsnippets panel — they live in `~/.config/secsnippets/templates.json` — outside the Secvim config on purpose, so your personal presets stay in your dotfiles and never ship with the distro (keys are a filetype like `typescriptreact` or a family like `js`) and appear marked with ★. Use `${1:placeholder}` for tabstops (`$0` is the final cursor position) and `\t` for indentation — it is re-indented to your local settings on expansion. Filetype inheritance (e.g. typescript also getting javascript snippets) is configured in `lua/secvim/plugins/env/blink-cmp.lua` under `sources.providers.snippets.opts.extended_filetypes`.
+
+---
+
+## Custom Filetypes
+
+Filetype detection rules are in `lua/secvim/config/filetypes.lua`. Current custom rules:
+
+- `.blade.php` files → `blade` filetype
+- `.env*` files → `dosini` syntax
+- HTML files in Django projects → `htmldjango` filetype
+
+To add your own:
+
+```lua
+vim.filetype.add({
+  extension = {
+    mdx = "markdown",
+    astro = "astro",
+  },
+  filename = {
+    ["docker-compose.yml"] = "yaml.docker-compose",
+  },
+  pattern = {
+    [".*%.config/.*"] = "conf",
+  },
+})
+```

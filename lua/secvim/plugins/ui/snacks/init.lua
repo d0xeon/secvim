@@ -1,0 +1,174 @@
+local dashboard = require 'secvim.plugins.ui.snacks.dashboard'
+local picker = require 'secvim.plugins.ui.snacks.picker'
+local keys = require 'secvim.plugins.ui.snacks.keys'
+
+return {
+  'folke/snacks.nvim',
+  priority = 1000,
+  lazy = false,
+  ---@type snacks.Config
+  opts = {
+    bigfile = { enabled = true },
+    dashboard = dashboard,
+    explorer = {
+      enabled = true,
+      cycle = false,
+      replace_netrw = false,
+    },
+    indent = {
+      enabled = require('secvim.config.toggles').get 'indent',
+      char = '│',
+      only_scope = false,
+      only_current = false,
+      animate = {
+        enabled = false,
+        style = 'out',
+        easing = 'linear',
+        duration = {
+          step = 20,
+          total = 500,
+        },
+      },
+      width = 70,
+      filter = function(buf)
+        return vim.g.snacks_indent ~= false and vim.b[buf].snacks_indent ~= false and vim.bo[buf].buftype == '' and vim.fn.line '$' > 1
+      end,
+    },
+    profiler = { enabled = true },
+    input = {
+      enabled = true,
+      win = {
+        row = 0.35,
+        col = 0.35,
+        border = 'rounded',
+        width = 65,
+        height = 2,
+      },
+    },
+    terminal = { enabled = false },
+    edgy = { enabled = true },
+    picker = picker,
+    quickfile = { enabled = true },
+    scope = { enabled = true },
+    statuscolumn = { enabled = true },
+    image = { enabled = true },
+    icons = { enabled = true },
+    animate = { enabled = true },
+    words = { enabled = true },
+    scroll = {
+      enabled = require('secvim.config.toggles').get 'scroll',
+      animate = {
+        duration = { step = 10, total = 120 },
+      },
+      filter = function(buf)
+        return vim.g.snacks_scroll ~= false and vim.b[buf].snacks_scroll ~= false and vim.bo[buf].buftype == '' and vim.bo[buf].filetype ~= 'bigfile'
+      end,
+    },
+    rename = { enabled = true },
+    toggle = { enabled = true },
+    lazygit = {
+      enabled = true,
+      -- Theme-independent lazygit look (identical across secmin/secvintage;
+      -- secnight swaps in its own monochrome variant).
+      -- See helpers/lazygit_theme for why we decouple from syntax groups.
+      theme = require('secvim.helpers.lazygit_theme').theme,
+    },
+    git = {
+      enabled = true,
+      width = 0.6,
+      height = 0.6,
+      border = 'rounded',
+      title = ' Git Blame ',
+      title_pos = 'center',
+      ft = 'git',
+    },
+    notifier = {
+      enabled = true,
+      timeout = 3000,
+      width = { min = 40, max = 0.4 },
+      height = { min = 1, max = 0.6 },
+      margin = { top = 1, right = 1, bottom = 1 },
+      padding = true,
+      sort = { 'level', 'added' },
+      level = vim.log.levels.TRACE,
+      style = 'compact',
+      top_down = true,
+      date_format = '%R',
+      more_format = ' ↓ %d lines ',
+      refresh = 50,
+    },
+  },
+  keys = keys,
+  init = function()
+    -- Canonical, theme-independent lazygit colors
+    require('secvim.helpers.lazygit_theme').setup()
+
+    -- Register custom Secvim startup section
+    local ok, snacks_dashboard = pcall(require, 'snacks.dashboard')
+    if ok and snacks_dashboard.sections then
+      snacks_dashboard.sections.secvim_startup = function(opts)
+        local secvim = require 'secvim'
+        local lazy = require 'lazy'
+        local stats = lazy.stats()
+        local ms = math.floor(stats.startuptime * 100 + 0.5) / 100
+
+        -- The sec themes and sec_plugins are lazy specs pointing at dirs
+        -- inside the config itself, not fetched plugins — count only the
+        -- external ones so the number means "third-party dependencies".
+        local config_dir = vim.fs.normalize(vim.fn.stdpath 'config')
+        local count, loaded = 0, 0
+        for _, plugin in ipairs(lazy.plugins()) do
+          local dir = plugin.dir and vim.fs.normalize(plugin.dir) or ''
+          if not vim.startswith(dir, config_dir) then
+            count = count + 1
+            if plugin._ and plugin._.loaded then
+              loaded = loaded + 1
+            end
+          end
+        end
+
+        return {
+          align = 'center',
+          text = {
+            -- ⚡
+            { '󰧱 ' .. secvim.name .. ' loaded ', hl = 'footer' },
+            { loaded .. '/' .. count, hl = 'special' },
+            { ' plugins in ', hl = 'footer' },
+            { ms .. 'ms', hl = 'special' },
+          },
+        }
+      end
+    end
+
+    vim.api.nvim_create_autocmd('User', {
+      pattern = 'VeryLazy',
+      callback = function()
+        _G.dd = function(...)
+          Snacks.debug.inspect(...)
+        end
+        _G.bt = function()
+          Snacks.debug.backtrace()
+        end
+        vim.print = _G.dd
+
+        require 'secvim.plugins.ui.snacks.toggles'
+      end,
+    })
+
+    -- Restore Seczen early (on VimEnter, not VeryLazy) so it doesn't pop in
+    -- 1-2s after startup when you open a file.
+    vim.api.nvim_create_autocmd('VimEnter', {
+      once = true,
+      callback = function()
+        local ok, toggles = pcall(require, 'secvim.config.toggles')
+        if ok and toggles.get 'seczen' then
+          vim.schedule(function()
+            pcall(function()
+              require('secvim.sec_plugins.seczen').on()
+            end)
+          end)
+        end
+      end,
+    })
+  end,
+}

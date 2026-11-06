@@ -1,0 +1,125 @@
+require('secvim.config.appearance').setup()
+
+-- Global indent default (2 spaces). Per-language overrides live in
+-- after/ftplugin/*.lua; without this, filetypes with no ftplugin fall back
+-- to Vim's ts=8 noexpandtab.
+vim.opt.tabstop = 2
+vim.opt.shiftwidth = 2
+vim.opt.softtabstop = 2
+vim.opt.expandtab = true
+
+vim.opt.title = true
+vim.opt.titlestring = '%{fnamemodify(getcwd(), ":t")}%( — %t%)'
+
+-- Global floating window border (Neovim 0.12+). Driven by the picker_border
+-- toggle (<leader>lqo) so vim.ui.select popups — which use `border = true`,
+-- resolving to `winborder` — stay in sync with the picker border style.
+vim.opt.winborder = require('secvim.config.toggles').get 'picker_border'
+
+-- Auto root detection using vim.fs.root() (Neovim 0.12+)
+local root_cache = {}
+
+local set_root = function()
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == '' then
+    return
+  end
+
+  local root = root_cache[path]
+  if root == nil then
+    root = vim.fs.root(0, { '.git', 'Makefile', '.rn' })
+    if root == nil then
+      return
+    end
+    root_cache[path] = root
+  end
+
+  if root ~= vim.fn.getcwd() then
+    vim.fn.chdir(root)
+  end
+end
+
+-- Terminal toggle term
+-- vim.api.nvim_set_keymap('t', '<Esc>', [[<C-\><C-n>]], { noremap = true })
+-- vim.api.nvim_set_keymap('t', '<C-x>', [[<C-\><C-n>]], { noremap = true })
+--Confirm before closing unsaved buffer
+vim.opt.confirm = true
+
+local root_augroup = vim.api.nvim_create_augroup('MyAutoRoot', {})
+vim.api.nvim_create_autocmd('BufEnter', { group = root_augroup, callback = set_root })
+
+-- Set to true if you have a Nerd Font installed
+vim.g.have_nerd_font = true
+
+-- Disables netrw
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
+-- Line numbers are set via toggles persistence (end of file)
+
+-- Mouse is already enabled by default; mousemoveevent is needed for hover UI
+vim.opt.mousemoveevent = true
+
+-- Don't show the mode, since it's already in the status line
+vim.opt.showmode = false
+
+-- Sync clipboard between OS and Neovim.
+--  Remove this option if you want your OS clipboard to remain independent.
+--  See `:help 'clipboard'`
+vim.opt.clipboard = 'unnamedplus'
+
+-- Enable break indent
+vim.opt.breakindent = true
+
+-- Wrap is set via toggles persistence (end of file).
+-- textwidth drives `gq` and comment reflow only; the `t` flag is NOT set
+-- globally because it hard-wraps source code at column 100 while typing.
+vim.opt.textwidth = 100
+
+-- Save undo history
+vim.opt.undofile = true
+
+-- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+
+-- Keep signcolumn on by default
+vim.opt.signcolumn = 'yes'
+
+-- How long the cursor must sit still before CursorHold fires. Well under the
+-- 4000ms default so idle work (LSP reference highlight, the autoread check)
+-- still feels immediate, but not so tight that it runs several times a second
+-- while you pause mid-thought.
+vim.opt.updatetime = 400
+
+-- Decrease mapped sequence wait time
+-- Displays which-key popup sooner
+vim.opt.timeoutlen = 500
+
+-- Configure how new splits should be opened
+vim.opt.splitright = true
+vim.opt.splitbelow = true
+
+-- Sets how neovim will display certain whitespace characters in the editor.
+--  See `:help 'list'`
+--  and `:help 'listchars'`
+vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
+vim.opt.fillchars:append { eob = ' ' }
+
+-- Preview substitutions live, as you type!
+vim.opt.inccommand = 'split'
+
+-- Minimal number of screen lines to keep above and below the cursor.
+vim.opt.scrolloff = 10
+
+-- Status line
+vim.o.laststatus = 3 -- or 3,  if u want global bar even hidden or 0 if u want to disable it
+
+local toggles = require 'secvim.config.toggles'
+vim.opt.spell = toggles.get 'spell'
+vim.opt.spelllang = toggles.get 'spelllang'
+vim.opt.wrap = toggles.get 'wrap'
+vim.opt.relativenumber = toggles.get 'relativenumber'
+vim.opt.number = toggles.get 'linenumber'
+
+require('secvim.config.cursor').setup()

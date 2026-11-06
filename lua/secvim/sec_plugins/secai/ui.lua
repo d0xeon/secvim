@@ -1,0 +1,87 @@
+--- SecAI ui - Pickers for theme / position / size / border
+--- All four use vim.ui.select so they inherit the snacks picker layout
+--- the user has configured globally.
+local M = {}
+
+--- Render an item label with a marker dot when it is the current value
+local function fmt(item, current)
+  local icon = item.icon or ''
+  local label = item.label or item.name
+  local marker = item.name == current and ' ●' or ''
+  return icon .. label .. marker
+end
+
+local function pick(opts)
+  vim.ui.select(opts.items, {
+    prompt = opts.prompt,
+    format_item = function(item)
+      return fmt(item, opts.current())
+    end,
+    kind = opts.kind,
+  }, function(choice)
+    if not choice then
+      return
+    end
+    opts.on_select(choice)
+  end)
+end
+
+function M.pick_theme()
+  local themes = require 'secvim.sec_plugins.secai.themes'
+  local items = {}
+  for _, t in ipairs(themes.list) do
+    table.insert(items, { name = t.name, label = t.label, icon = t.icon .. ' ' })
+  end
+  pick {
+    prompt = 'SecAI · select theme',
+    kind = 'secai_theme',
+    items = items,
+    current = function()
+      return themes.current().name
+    end,
+    on_select = function(item)
+      themes.set(item.name)
+      Snacks.notify.info('SecAI theme: ' .. item.name)
+    end,
+  }
+end
+
+function M.pick_position()
+  local layout = require 'secvim.sec_plugins.secai.layout'
+  pick {
+    prompt = 'SecAI · select position',
+    kind = 'secai_position',
+    items = layout.positions,
+    current = function()
+      return layout.current_position()
+    end,
+    on_select = function(item)
+      require('secvim.helpers.panel_side').set_panel(item.name)
+      Snacks.notify.info('SecAI position: ' .. item.name)
+      require('secvim.sec_plugins.secai').relayout()
+    end,
+  }
+end
+
+function M.pick_size()
+  local layout = require 'secvim.sec_plugins.secai.layout'
+  require('secvim.helpers.size_popup').open {
+    title = ' SecAI · Size ',
+    name = 'SecAI',
+    list = layout.sizes,
+    get = function(mode)
+      return layout.size_name(mode)
+    end,
+    set = function(mode, name)
+      layout.set_size(mode, name)
+    end,
+    apply = function()
+      -- Picking a named preset resets any interactive arrow-resize override,
+      -- then re-lay every open slot with its per-mode size.
+      layout.clear_overrides()
+      require('secvim.sec_plugins.secai').relayout()
+    end,
+  }
+end
+
+return M

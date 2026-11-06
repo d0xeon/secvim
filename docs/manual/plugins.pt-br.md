@@ -1,0 +1,231 @@
+# Catálogo de Plugins
+
+Os plugins do Secvim são gerenciados pelo [Lazy.nvim](https://github.com/folke/lazy.nvim) com carregamento inteligente para startup rápido.
+
+## Índice
+
+- [Core & Infraestrutura](#core--infraestrutura)
+- [LSP & Completion](#lsp--completion)
+- [Sintaxe & Treesitter](#sintaxe--treesitter)
+- [Formatação & Linting](#formatação--linting)
+- [Debugging](#debugging)
+- [Testes](#testes)
+- [UI & Aparência](#ui--aparência)
+- [Navegação & Busca](#navegação--busca)
+- [Melhorias do Editor](#melhorias-do-editor)
+- [Git](#git)
+- [IA](#ia)
+- [Específicos por Linguagem](#específicos-por-linguagem)
+- [Banco de Dados](#banco-de-dados)
+- [Notas & Escrita](#notas--escrita)
+- [Utilitários](#utilitários)
+
+---
+
+## Core & Infraestrutura
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [lazy.nvim](https://github.com/folke/lazy.nvim) | Gerenciador de plugins — cuida da instalação, atualizações e lazy-loading |
+| [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) | Biblioteca utilitária Lua usada por muitos plugins |
+| [nui.nvim](https://github.com/MunifTanjim/nui.nvim) | Biblioteca de componentes de UI para desenvolvedores de plugins |
+| [FixCursorHold.nvim](https://github.com/antoinemadec/FixCursorHold.nvim) | Corrige problemas de performance do CursorHold |
+
+---
+
+## LSP & Completion
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) | Configuração para o cliente LSP nativo |
+| [mason.nvim](https://github.com/williamboman/mason.nvim) | Gerenciador de pacotes portátil — instala LSP servers, formatters, linters e adaptadores DAP |
+| [mason-tool-installer.nvim](https://github.com/WhoIsSethDaniel/mason-tool-installer.nvim) | Instala automaticamente ferramentas do Mason no startup |
+| [blink.cmp](https://github.com/Saghen/blink.cmp) | Engine de completion em Rust — autocompleção extremamente rápida |
+| [friendly-snippets](https://github.com/rafamadriz/friendly-snippets) | Coleção de snippets mantida pela comunidade para muitas linguagens |
+| [lazydev.nvim](https://github.com/folke/lazydev.nvim) | Helpers de desenvolvimento para criação de plugins Lua/Neovim |
+| [blink-copilot](https://github.com/giuxtaposition/blink-copilot) | Fonte do Copilot para blink.cmp |
+| [blink-emoji.nvim](https://github.com/moyiz/blink-emoji.nvim) | Fonte de completion de emojis |
+
+---
+
+## Sintaxe & Treesitter
+
+Secvim usa **treesitter nativo do Neovim 0.12+** — nenhum plugin necessário para syntax highlighting, indentação ou folding.
+
+| Feature | Descrição |
+|:--------|:----------|
+| Treesitter Highlighting Nativo | `vim.treesitter.start()` built-in — habilitado automaticamente por buffer |
+| Treesitter Indentação Nativa | `vim.treesitter.indentexpr()` built-in — configurado automaticamente por buffer |
+
+---
+
+## Formatação & Linting
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [conform.nvim](https://github.com/stevearc/conform.nvim) | Formatador com suporte a format-on-save assíncrono |
+| [nvim-lint](https://github.com/mfussenegger/nvim-lint) | Agregador de linters assíncronos |
+
+---
+
+## Debugging
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [nvim-dap](https://github.com/mfussenegger/nvim-dap) | Cliente do Debug Adapter Protocol |
+| [nvim-dap-ui](https://github.com/rcarriga/nvim-dap-ui) | UI para nvim-dap — variáveis, breakpoints, call stack, console |
+| [nvim-dap-virtual-text](https://github.com/theHamsta/nvim-dap-virtual-text) | Valores de variáveis inline durante debugging |
+| [nvim-dap-python](https://github.com/mfussenegger/nvim-dap-python) | Adaptador de debug Python (debugpy) |
+| [nvim-dap-go](https://github.com/leoluz/nvim-dap-go) | Adaptador de debug Go (delve) |
+
+---
+
+## Testes
+
+| Plugin | Descrição |
+|:-------|:----------|
+| Sectest | Test runner nativo com popup UI (Go, Jest, Vitest, Pytest, Pest, PHPUnit, Java) |
+| Secfile | Menu nativo de operações com arquivos (criar, renomear, duplicar, deletar, info) |
+| Secdirs | Gerenciador dinâmico de diretórios de Projects & vaults Obsidian — `<leader>lp` |
+
+---
+
+## UI & Aparência
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [snacks.nvim](https://github.com/folke/snacks.nvim) | Tudo-em-um: dashboard, file explorer, picker, notificador, profiler e mais |
+| [lualine.nvim](https://github.com/nvim-lualine/lualine.nvim) | Statusline rápida e customizável |
+| [noice.nvim](https://github.com/folke/noice.nvim) | UI moderna para mensagens, linha de comando e popups |
+| [dropbar.nvim](https://github.com/Bekaboo/dropbar.nvim) | Barra de navegação com breadcrumbs estilo IDE |
+| [bufferline.nvim](https://github.com/akinsho/bufferline.nvim) | Barra de abas de buffers com diagnósticos, pick e ordenação |
+| [incline.nvim](https://github.com/b0o/incline.nvim) | Indicador flutuante de nome de arquivo por janela |
+| [which-key.nvim](https://github.com/folke/which-key.nvim) | Exibe atalhos disponíveis em um popup |
+| [nvim-highlight-colors](https://github.com/brenoprata10/nvim-highlight-colors) | Destaca códigos de cores com sua cor real |
+| [mini.icons](https://github.com/echasnovski/mini.icons) | Ícones de tipo de arquivo |
+| [render-markdown.nvim](https://github.com/meanderingprogrammer/render-markdown.nvim) | Renderização aprimorada de markdown no editor |
+| [markdown-preview.nvim](https://github.com/iamcco/markdown-preview.nvim) | Preview de markdown ao vivo no navegador |
+
+### Themes
+
+Secvim vem com seus próprios temas built-in, armazenados em `lua/secvim/sec_themes/`. Esses são os únicos temas totalmente customizáveis com dark/light mode, transparência e overrides. Outros temas disponíveis vêm do LazyVim.
+
+| Tema | Descrição |
+|:-----|:----------|
+| **Secmin** (built-in, padrão) | Tema minimal estético inspirado no min-theme — dark/light mode, transparência, overrides customizáveis |
+| **Secvintage** (built-in) | Tema quente e terroso — dark/light mode, transparência, overrides customizáveis |
+
+---
+
+## Navegação & Busca
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [flash.nvim](https://github.com/folke/flash.nvim) | Navegue pelo código com labels de busca — substitui movimentos f/F/t/T |
+| Secpin (built-in) | Favorite/marque arquivos para acesso instantâneo (persistido por git repo) |
+| Secpreview (built-in) | Preview de definições LSP em janelas flutuantes |
+| [grug-far.nvim](https://github.com/MagicDuck/grug-far.nvim) | Buscar e substituir alimentado por ripgrep |
+
+---
+
+## Melhorias do Editor
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [nvim-surround](https://github.com/kylechui/nvim-surround) | Adicionar, mudar e deletar caracteres ao redor |
+| [vim-matchup](https://github.com/andymass/vim-matchup) | Correspondência `%` estendida para construções de linguagem |
+| Secvisualmulti (built-in) | Edição com múltiplos cursores sobre extmarks — cursores por ocorrência, coluna e regex, replay de insert, comandos normais e macros em todos os cursores, align, popup de rename, menu dinâmico de ações (`<leader>kv`) |
+| Secyank (built-in) | Histórico de yank com persistência — ring buffer de 50 entradas, limpeza automática |
+| Sectag (built-in) | Fecha e renomeia tags html/jsx ao vivo, varredura de texto puro, sem precisar de parser do treesitter (toggles em `<leader>lat`, rename manual `<leader>kr`) |
+| [todo-comments.nvim](https://github.com/folke/todo-comments.nvim) | Destacar e buscar TODO, FIXME, HACK, etc. |
+| Secpick (built-in) | Seletor visual de janelas com labels flutuantes |
+| [smart-splits.nvim](https://github.com/mrjones2014/smart-splits.nvim) | Navegação e redimensionamento inteligente de janelas |
+| Secmaximize (built-in) | Maximizador de janela (`<leader>cm`) — maximiza a janela atual e restaura o layout, mostrando um badge `max` no buffer e um indicador na lualine (configurável via `<leader>lam`) |
+| Seczen (built-in) | Modo sem distrações (`<leader>lz`) — maximiza e centraliza a janela atual e esconde toda a UI (statusline, bufferline, números, dropbar, incline). Ferramentas flutuantes (Secterm/SecAI/Yazi/Lazygit) continuam abrindo por cima; persiste entre sessões |
+| Secsave (built-in) | Salvamento automático de arquivos com debounce e toggle persistido |
+| Secsweep (built-in) | Fecha automaticamente buffers inativos após timeout configurável |
+| [toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim) | Emulador de terminal flutuante e em split |
+| [yazi.nvim](https://github.com/mikavilpas/yazi.nvim) | Integração com o file manager Yazi |
+
+---
+
+## Git
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim) | Indicadores de mudanças do git, staging, blame e navegação de hunks |
+
+---
+
+## IA
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [copilot.lua](https://github.com/zbirenbaum/copilot.lua) | Integração com GitHub Copilot |
+| [copilot-lualine](https://github.com/AndreM222/copilot-lualine) | Status do Copilot na statusline |
+| SecAI | Integração nativa com CLIs de IA (Claude, Cursor, OpenClaude, OpenCode, Gemini, ...) com temas, Ask AI com preview, resize pelas setas e bordas rounded por orientação |
+
+**Revisar Mudanças da IA** — o SecAI pode revisar as edições de arquivo que o CLI de IA faz em disco, hunk por hunk. Ao abrir um CLI ele captura um snapshot de baseline; depois, `<leader>ar` mostra cada arquivo alterado como diffs inline verde/vermelho (estilo Cursor/VSCode) além de um painel flutuante de visão geral, permitindo aceitar (keep) ou rejeitar (reject) cada hunk individualmente. É construído sobre o gitsigns e funciona independentemente do seu histórico git.
+
+---
+
+## Específicos por Linguagem
+
+| Plugin | Descrição |
+|:-------|:----------|
+| SecKit | Navegador de projeto nativo com detecção de stack e ferramentas (o rename tag do Sectag aparece aqui em buffers html/jsx) |
+| [vim-blade](https://github.com/jwalton512/vim-blade) | Syntax highlighting para templates Blade |
+| [nvim-jdtls](https://github.com/mfussenegger/nvim-jdtls) | Suporte estendido a Java LSP (Eclipse JDT.LS) |
+| [venv-selector.nvim](https://github.com/linux-cultivator/venv-selector.nvim) | Seletor de ambiente virtual Python |
+
+---
+
+## Banco de Dados
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [vim-dadbod](https://github.com/tpope/vim-dadbod) | Cliente de banco de dados — conecta a PostgreSQL, MySQL, SQLite e mais |
+| [vim-dadbod-ui](https://github.com/kristijanhusak/vim-dadbod-ui) | UI para vim-dadbod — navegar tabelas, executar queries |
+| [vim-dadbod-completion](https://github.com/kristijanhusak/vim-dadbod-completion) | Autocompleção para queries SQL |
+
+---
+
+## Notas & Escrita
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [obsidian.nvim](https://github.com/epwalsh/obsidian.nvim) | Integração com Obsidian vault — notas diárias, templates, backlinks, busca |
+
+> **Configuração necessária:** Edite `plugins/editor/obsidian.lua` e altere o caminho do vault para o seu:
+> ```lua
+> -- Change this to your Obsidian vault path
+> local vault_path = '~/Developer/second-brain'  -- padrão
+> local vault_path = '~/Documents/meu-vault'     -- seu caminho
+> ```
+
+---
+
+## Utilitários
+
+| Plugin | Descrição |
+|:-------|:----------|
+| [discord.nvim](https://github.com/vyfor/cord.nvim) | Discord Rich Presence |
+| [codesnap.nvim](https://github.com/mistricky/codesnap.nvim) | Screenshots bonitos de código |
+| [logger.nvim](https://github.com/Tastyep/structlog.nvim) | Utilitário de debug logging |
+| [neovim-project](https://github.com/coffebar/neovim-project) | Gerenciamento e descoberta de projetos |
+
+> **Configuração necessária:** Edite `plugins/editor/projects.lua` e altere os diretórios para os seus:
+> ```lua
+> -- Change these to your own project directories
+> projects = {
+>   '~/Developer/Projects/Garage/*',    -- exemplo padrão
+>   '~/Developer/Projects/Personal/*',
+> }
+> -- Altere para seus diretórios:
+> projects = {
+>   '~/projetos/*',
+>   '~/trabalho/*',
+> }
+> ```
+| [neovim-session-manager](https://github.com/Shatur/neovim-session-manager) | Persistência de sessão |
+| [trouble.nvim](https://github.com/folke/trouble.nvim) | Diagnósticos, referências e quickfix list em interface bonita |

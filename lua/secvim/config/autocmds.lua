@@ -1,0 +1,492 @@
+local misc_group = vim.api.nvim_create_augroup('secvim_misc', { clear = true })
+
+-- Disable background colors for LSP document colors (Tailwind CSS, etc.)
+vim.api.nvim_create_autocmd('LspAttach', {
+  group = misc_group,
+  callback = function()
+    vim.lsp.document_color.enable(false)
+  end,
+})
+
+local toggles = require 'secvim.config.toggles'
+
+-- Keep editor panes evenly sized when a sidebar (Snacks Explorer, Trouble, …)
+-- opens or closes over an existing split.
+require('secvim.helpers.win_equal').watch_sidebars()
+
+-- Startup behavior for the directory-argument picker and the auto explorer
+-- lives in one VimEnter handler further down (after open_snacks_explorer is
+-- defined) so their ordering is explicit instead of registration-dependent.
+
+--last cursor position
+local grp_lastpos = vim.api.nvim_create_augroup('LastCursorPos', { clear = true })
+
+vim.api.nvim_create_autocmd('BufReadPost', {
+  group = grp_lastpos,
+  callback = function(event)
+    if not toggles.get 'lastpos' then
+      return
+    end
+
+    local buf = event.buf
+    local exclude = { 'gitcommit', 'gitrebase' }
+
+    if vim.tbl_contains(exclude, vim.bo[buf].filetype) or vim.b[buf].last_cursor_restored then
+      return
+    end
+
+    vim.b[buf].last_cursor_restored = true
+
+    local mark = vim.api.nvim_buf_get_mark(buf, '"')
+    local line_count = vim.api.nvim_buf_line_count(buf)
+
+    if mark[1] > 0 and mark[1] <= line_count then
+      pcall(vim.api.nvim_win_set_cursor, 0, mark)
+    end
+  end,
+})
+
+-- Initialize spell checking on buffer read
+local spell_group = vim.api.nvim_create_augroup('SpellByDefault', { clear = true })
+
+vim.api.nvim_create_autocmd('FileType', {
+  group = spell_group,
+  pattern = { 'markdown', 'text' },
+  callback = function()
+    vim.opt_local.spell = toggles.get 'spell'
+  end,
+})
+
+vim.api.nvim_create_autocmd('FileType', {
+  group = misc_group,
+  pattern = 'dashboard',
+  command = 'setlocal nolist',
+})
+
+vim.api.nvim_create_autocmd('TextYankPost', {
+  desc = 'Highlight when yanking (copying) text',
+  group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
+  callback = function()
+    vim.hl.on_yank()
+  end,
+})
+
+-- Syntax highlighting for dotenv files
+local dotenv_ft = vim.api.nvim_create_augroup('dotenv_ft', { clear = true })
+
+vim.api.nvim_create_autocmd('BufRead', {
+  group = dotenv_ft,
+  pattern = { '.env*', '.env' },
+  callback = function()
+    if toggles.get 'dotenv_syntax' then
+      vim.bo.filetype = 'dosini'
+    end
+  end,
+})
+
+-- Disable auto comment continuation on new lines
+local no_auto_comment = vim.api.nvim_create_augroup('no_auto_comment', { clear = true })
+
+vim.api.nvim_create_autocmd('FileType', {
+  group = no_auto_comment,
+  callback = function()
+    if toggles.get 'no_auto_comment' then
+      vim.opt_local.formatoptions:remove { 'c', 'r', 'o' }
+    end
+  end,
+})
+
+--Auto Save (FocusLost/BufLeave)
+local autosave_group = vim.api.nvim_create_augroup('kickstart-autosave', { clear = true })
+
+vim.api.nvim_create_autocmd({ 'FocusLost', 'BufLeave' }, {
+  group = autosave_group,
+  callback = function()
+    if toggles.get 'autosave_focuslost' then
+      vim.cmd 'silent! update'
+    end
+  end,
+})
+
+-- Auto-reload buffers changed on disk (SecAI, git, external edits)
+local autoread_group = vim.api.nvim_create_augroup('kickstart-autoread', { clear = true })
+
+--- Re-stat the file buffers currently ON SCREEN and reload the ones that
+--- changed on disk.
+---
+--- Bare `:checktime` stats EVERY loaded buffer, so an afternoon in a monorepo
+--- turns each idle tick into hundreds of stat() calls. Only what you can see
+--- has to be polled: a hidden buffer is checked by the BufEnter below the
+--- instant you switch to it, so nothing is missed — and a file the SecAI CLI
+--- writes to while it sits in a visible split still refreshes live.
+local function checktime_visible()
+  local seen = {}
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if not seen[buf] and vim.bo[buf].buftype == '' and vim.api.nvim_buf_get_name(buf) ~= '' then
+      seen[buf] = true
+      pcall(vim.cmd, 'silent! checktime ' .. buf)
+    end
+  end
+end
+
+-- CursorHoldI is deliberately absent: doing this mid-typing (every `updatetime`
+-- pause in insert mode) buys nothing — the file cannot have changed under you
+-- while you type into it, and CursorHold covers the moment you stop.
+vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter', 'CursorHold', 'TermLeave' }, {
+  group = autoread_group,
+  callback = function()
+    if not toggles.get 'autoread' then
+      return
+    end
+    -- Skip special buffers (terminals, prompts, non-file buffers)
+    if vim.bo.buftype ~= '' or vim.fn.mode() == 'c' then
+      return
+    end
+    checktime_visible()
+  end,
+})
+
+-- Live reload while parked in a terminal (e.g. the SecAI CLI): the event autocmd
+-- above already covers normal editing via CursorHold, but CursorHold never fires
+-- while focused on a terminal buffer, so a visible file split wouldn't refresh as
+-- the CLI writes to disk. This timer fills only that gap.
+-- `checktime` just stats files and never touches buffers with unsaved changes.
+local autoread_interval = 1000 -- ms
+local autoread_timer = vim.uv.new_timer()
+if autoread_timer then
+  autoread_timer:start(
+    autoread_interval,
+    autoread_interval,
+    vim.schedule_wrap(function()
+      if not toggles.get 'autoread' then
+        return
+      end
+      -- Only act while focused on a non-file buffer (terminal/prompt). When you're
+      -- in a normal buffer, CursorHold already reloads all buffers on idle.
+      if vim.bo.buftype == '' then
+        return
+      end
+      -- Same visible-only scan: it is the on-screen split that has to refresh
+      -- while the CLI writes, and it already skips the work when nothing is up.
+      checktime_visible()
+    end)
+  )
+
+  vim.api.nvim_create_autocmd('VimLeavePre', {
+    group = autoread_group,
+    callback = function()
+      if autoread_timer and not autoread_timer:is_closing() then
+        autoread_timer:stop()
+        autoread_timer:close()
+      end
+    end,
+  })
+end
+
+-- Secterm
+function _G.set_terminal_keymaps()
+  local opts = { buffer = 0 }
+  vim.keymap.set('t', '<esc>', [[<C-\><C-n>]], opts)
+  vim.keymap.set('t', 'jk', [[<C-\><C-n>]], opts)
+  vim.keymap.set('t', '<C-h>', [[<Cmd>wincmd h<CR>]], opts)
+  vim.keymap.set('t', '<C-j>', [[<Cmd>wincmd j<CR>]], opts)
+  vim.keymap.set('t', '<C-k>', [[<Cmd>wincmd k<CR>]], opts)
+  vim.keymap.set('t', '<C-l>', [[<Cmd>wincmd l<CR>]], opts)
+  vim.keymap.set('t', '<C-w>', [[<C-\><C-n><C-w>]], opts)
+end
+
+vim.api.nvim_create_autocmd('FileType', {
+  group = misc_group,
+  pattern = 'secterm',
+  callback = set_terminal_keymaps,
+})
+
+-- Snacks Explorer
+local function focus_buffer_after_snacks(bufnr)
+  local attempts, settled = 0, 0
+  local function try_focus()
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      return
+    end
+    if vim.api.nvim_get_current_buf() == bufnr then
+      -- Focus can still be stolen back while the explorer settles; stop only
+      -- after it has held for two consecutive checks.
+      settled = settled + 1
+      if settled >= 2 then
+        return
+      end
+    else
+      settled = 0
+      vim.api.nvim_set_current_buf(bufnr)
+    end
+    attempts = attempts + 1
+    if attempts < 10 then
+      vim.defer_fn(try_focus, 15)
+    end
+  end
+  try_focus()
+end
+
+local explorer_auto_opened = false
+
+local function open_snacks_explorer()
+  if explorer_auto_opened then
+    return
+  end
+  explorer_auto_opened = true
+
+  local ok, snacks = pcall(require, 'snacks')
+  if not ok or not snacks or not snacks.explorer then
+    return
+  end
+
+  local bufnr = vim.api.nvim_get_current_buf()
+  snacks.explorer()
+  if not toggles.get 'snacks_explorer_focus' then
+    focus_buffer_after_snacks(bufnr)
+  end
+end
+
+vim.api.nvim_create_autocmd('VimEnter', {
+  group = vim.api.nvim_create_augroup('secvim_startup', { clear = true }),
+  callback = function()
+    -- `nvim <dir>`: hand off to the picker
+    local opened_with_dir = vim.fn.argc() == 1 and vim.fn.isdirectory(vim.fn.argv(0)) == 1
+    if opened_with_dir then
+      Snacks.picker.smart()
+      return
+    end
+    -- `nvim <file>`: optionally open the explorer alongside. Skipped with no
+    -- args (dashboard is shown instead).
+    if vim.fn.argc() > 0 and toggles.get 'snacks_explorer' then
+      open_snacks_explorer()
+    end
+  end,
+})
+
+-- Open explorer when navigating away from dashboard to a file
+vim.api.nvim_create_autocmd('BufReadPost', {
+  group = misc_group,
+  once = true,
+  callback = function(args)
+    if not toggles.get 'snacks_explorer' then
+      return
+    end
+
+    local bufname = vim.api.nvim_buf_get_name(args.buf)
+    if bufname == '' or bufname:match 'snacks_picker_input' or bufname:match 'NvimTree_' or bufname:match '^%[.*%]$' then
+      return
+    end
+
+    -- Change cwd to the file's directory (or its git root) so the explorer
+    -- opens in the right place. vim.fs.root instead of forking git: this runs
+    -- on the first BufReadPost, before the first paint.
+    local file_dir = vim.fn.fnamemodify(bufname, ':p:h')
+    local git_root = vim.fs.root(file_dir, '.git')
+    vim.cmd('cd ' .. vim.fn.fnameescape(git_root or file_dir))
+
+    open_snacks_explorer()
+  end,
+})
+
+local my_highlights = vim.api.nvim_create_augroup('MyHighlights', { clear = true })
+
+-- One ColorScheme + one VimEnter pair shared by every registered callback
+-- (each on_colorscheme() call used to create its own two autocmds).
+-- ColorScheme never fires on boot, so VimEnter covers startup.
+local colorscheme_callbacks = {}
+
+local function run_colorscheme_callbacks()
+  for _, fn in ipairs(colorscheme_callbacks) do
+    fn()
+  end
+end
+
+vim.api.nvim_create_autocmd('ColorScheme', {
+  group = my_highlights,
+  callback = run_colorscheme_callbacks,
+})
+vim.api.nvim_create_autocmd('VimEnter', {
+  group = my_highlights,
+  callback = function()
+    vim.schedule(run_colorscheme_callbacks)
+  end,
+})
+
+local function on_colorscheme(fn)
+  table.insert(colorscheme_callbacks, fn)
+end
+
+local function lsp_reference_highlights()
+  if not toggles.get 'lsp_ref_highlights' then
+    return
+  end
+
+  local fg = vim.o.background == 'light' and '#000000' or '#FFFFFF'
+  local highlight_style = { bold = true, bg = 'none', fg = fg }
+
+  vim.api.nvim_set_hl(0, 'LspReferenceRead', highlight_style)
+  vim.api.nvim_set_hl(0, 'LspReferenceWrite', highlight_style)
+  vim.api.nvim_set_hl(0, 'LspReferenceText', highlight_style)
+end
+
+local function bg_only_match_highlights()
+  local function bg_of(name)
+    local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = name, link = false })
+    return ok and hl.bg or nil
+  end
+
+  local bg = bg_of 'MatchParen' or bg_of 'Visual'
+  if not bg then
+    return
+  end
+
+  for _, group in ipairs { 'MatchWord', 'MatchWordCur', 'MatchParenCur' } do
+    vim.api.nvim_set_hl(0, group, { bg = bg })
+  end
+end
+
+on_colorscheme(lsp_reference_highlights)
+on_colorscheme(bg_only_match_highlights)
+
+-- Re-apply lualine state after colorscheme change
+vim.api.nvim_create_autocmd('ColorScheme', {
+  group = my_highlights,
+  callback = function()
+    vim.schedule(function()
+      local ok, lualine = pcall(require, 'lualine')
+      if not ok then
+        return
+      end
+      local lualine_enabled = toggles.get 'lualine'
+      if lualine_enabled then
+        -- Refresh lualine to pick up new theme colors
+        local theme_ok, theme = pcall(require, 'secvim.plugins.ui.lualine.theme')
+        local sections = require 'secvim.plugins.ui.lualine.sections'
+        local sep = sections.get_sep()
+        local use_custom = toggles.get 'lualine_theme'
+        lualine.setup {
+          options = {
+            theme = (use_custom and theme_ok) and theme.create() or 'auto',
+            section_separators = sep.section,
+            component_separators = sep.component,
+            globalstatus = true,
+          },
+          sections = sections.build(sep),
+          inactive_sections = sections.inactive_sections,
+        }
+        lualine.hide { unhide = true }
+      else
+        lualine.hide { unhide = false }
+        -- hide() can't restore once a re-setup reset lualine's cache; wipe
+        -- any leftover rendered bar (see sections.clear_stale)
+        require('secvim.plugins.ui.lualine.sections').clear_stale()
+        -- Ensure native statusline stays visible when lualine is off
+        vim.defer_fn(function()
+          vim.o.laststatus = 3
+        end, 50)
+      end
+    end)
+  end,
+})
+
+-- DBUI NO FOLDING
+vim.api.nvim_create_autocmd('FileType', {
+  group = misc_group,
+  pattern = 'dbout',
+  callback = function()
+    if toggles.get 'dbout_no_folding' then
+      vim.cmd 'normal! zR'
+    end
+  end,
+})
+
+-- Secterm: a thin bar cursor while typing (insert/terminal), a block in
+-- visual so you can tell which end of the selection moves, and no cursor at
+-- all in normal mode, plus no full-width CursorLine, so the terminal stays
+-- clean instead of showing a heavy block on the current line.
+--
+-- A terminal buffer owns the real cursor and a redraw re-applies its own shape
+-- even after the mode went back to normal, so it flashed back on every motion.
+-- Nvim doesn't report every mode change from a terminal buffer either, so the
+-- shape can't be picked per mode inside a single option: each state gets a
+-- whole 'guicursor' whose entries all look the same, switched here on
+-- ModeChanged.
+do
+  local bar_fts = { secterm = true }
+  local saved
+  local GUICURSOR = {
+    typing = 'a:ver25',
+    visual = 'a:block',
+    normal = 'a:block-SectermHiddenCursor/SectermHiddenCursor',
+  }
+  local grp = vim.api.nvim_create_augroup('secterm_bar_cursor', { clear = true })
+  local function set_hidden_hl()
+    vim.api.nvim_set_hl(0, 'SectermHiddenCursor', { blend = 100, nocombine = true })
+  end
+  on_colorscheme(set_hidden_hl)
+  local function state()
+    local mode = vim.fn.mode()
+    if mode == 't' then
+      return 'typing'
+    end
+    -- v, V, <C-v> and their select-mode counterparts
+    if mode:find '^[vVsS\22\19]' then
+      return 'visual'
+    end
+    return 'normal'
+  end
+  local function apply()
+    set_hidden_hl()
+    vim.o.guicursor = GUICURSOR[state()]
+  end
+  vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+    group = grp,
+    callback = function(ev)
+      if bar_fts[vim.bo[ev.buf].filetype] then
+        if not saved then
+          saved = vim.o.guicursor
+        end
+        apply()
+        vim.wo.cursorline = false
+      elseif saved then
+        vim.o.guicursor = saved
+        saved = nil
+      end
+    end,
+  })
+  vim.api.nvim_create_autocmd('ModeChanged', {
+    group = grp,
+    callback = function(ev)
+      if bar_fts[vim.bo[ev.buf].filetype] then
+        apply()
+      end
+    end,
+  })
+end
+
+vim.api.nvim_create_autocmd('ModeChanged', {
+  group = vim.api.nvim_create_augroup('secvim_snippet_stop', { clear = true }),
+  pattern = '*:n',
+  callback = function()
+    if not vim.snippet.active() then
+      return
+    end
+    vim.defer_fn(function()
+      if vim.snippet.active() and vim.fn.mode() == 'n' then
+        vim.snippet.stop()
+      end
+    end, 60)
+  end,
+})
+
+-- `:help secvim` needs doc/tags. Generate it during config load when missing,
+-- so both `+help` commands and the first interactive `:help` work. After the
+-- first run this is a single stat.
+do
+  local doc = vim.fn.stdpath 'config' .. '/doc'
+  if vim.fn.isdirectory(doc) == 1 and vim.fn.filereadable(doc .. '/tags') == 0 then
+    pcall(vim.cmd, 'helptags ' .. vim.fn.fnameescape(doc))
+  end
+end

@@ -1,0 +1,46 @@
+local toggles = require 'secvim.config.toggles'
+
+return function(persist_toggle)
+  persist_toggle(Snacks.toggle.option('wrap', { name = 'Wrap' }), 'wrap'):map '<leader>lw'
+  persist_toggle(Snacks.toggle.option('relativenumber', { name = 'Relative Number' }), 'relativenumber'):map '<leader>lg'
+  persist_toggle(Snacks.toggle.line_number(), 'linenumber'):map '<leader>ln'
+  vim.keymap.set('n', '<leader>lz', function()
+    require('secvim.sec_plugins.seczen').toggle()
+  end, { desc = 'Toggle Seczen' })
+  persist_toggle(Snacks.toggle.indent(), 'indent'):map '<leader>li'
+  persist_toggle(Snacks.toggle.dim(), 'dim'):map '<leader>lk'
+
+  Snacks.toggle({
+    name = 'Cursor Block',
+    get = function()
+      return toggles.get 'cursor_block'
+    end,
+    set = function(state)
+      require('secvim.config.cursor').set_shape(state)
+      toggles.set('cursor_block', state)
+    end,
+  }):map '<leader>ly'
+
+  Snacks.toggle({
+    name = 'Cursor Line',
+    get = function()
+      return vim.o.cursorline
+    end,
+    set = function(state)
+      require('secvim.config.cursor').set_line(state)
+      toggles.set('cursorline', state)
+    end,
+  }):map '<leader>lY'
+
+  -- Spell
+  Snacks.toggle({
+    name = 'Spellcheck',
+    get = function()
+      return vim.o.spell
+    end,
+    set = function(state)
+      vim.o.spell = state
+      toggles.set('spell', state)
+    end,
+  }):map '<leader>ljj'
+end

@@ -1,0 +1,181 @@
+*secvim.txt*  Secvim keybindings and workflows
+*secvim* *secvim-help* *secvim-keymaps* *secvim-shortcuts*
+
+Secvim is a Neovim 0.12+ distribution for authorized security research and
+bug bounty work. This file lists the keys you need day to day. The full
+reference lives at:
+  docs/manual/keybinds.md
+
+  <leader>?       open the full Markdown keybindings reference
+  <leader>sk      search every active keymap
+  <leader>        which-key popup
+
+Leader is <Space>. <C-x> means Ctrl+x and <M-x> means Alt/Option+x.
+
+==============================================================================
+Daily driver                                        *secvim-daily*
+
+  <leader>w          save
+  <leader>W          save without formatting
+  <leader>q          close window
+  <leader>bd         close buffer (keeps the layout)
+  <leader>e          focus/toggle the sidebar
+  <C-b>              toggle the sidebar
+  <Esc>              close the sidebar while focused
+  <C-p>              project file search (layout-aware)
+  <leader>ff         project file search
+  <leader>sg         live project grep
+  <leader>/          search the current buffer
+  <C-h/j/k/l>        move splits / tmux panes
+  <M-h/j/k/l>        resize splits / tmux panes
+  <leader>bn         new buffer
+  <leader>bd         close buffer
+  <leader>bo         close other buffers
+  <leader>bj / bk    previous / next buffer
+  <leader>tn / tc    new / close tab
+  gcc / <C-/>        toggle line comment
+  <M-Up/Down>        move the current line up / down
+  Shift+Alt+Up/Down  duplicate line up / down
+  <leader>lf         format file
+  <leader>la         code action
+  <leader>r          rename symbol
+  <C-\>              toggle terminal
+  F5 / F7 / F6       debug / build / run C-C++
+  <leader>?          full keybindings reference
+
+NOTE: literal Ctrl+? is DEL/Backspace in most terminals. Use <C-p> for
+project search and <C-g> for the dev layout.
+
+==============================================================================
+Dev layout                                          *secvim-layout*
+                                                    *secvim-dev-layout*
+
+  <C-g>              open/focus the 2x2 grid; press again inside to close
+  <leader>lw         same as <C-g>
+  :SecLayout         command form
+  :SecLayoutClose    close it
+
+  ┌──────────────┬──────────────┐
+  │ code window  │ Run          │
+  ├──────────────┼──────────────┤
+  │ Logs         │ Tests        │
+  └──────────────┴──────────────┘
+
+  The layout is a Neovim-native tab. Commands are configured in:
+    lua/secvim/config/layout.lua
+
+  Leave a command empty for a shell. <C-p> in the layout opens the selected
+  file in the code pane, even from a terminal pane. The minimap is suppressed
+  in this tab. Closing Neovim closes the terminals.
+
+==============================================================================
+Sidebar and files                                   *secvim-sidebar*
+                                                    *secvim-files*
+
+  <leader>e          focus the explorer; press again inside it to close
+  <C-b>              toggle the explorer
+  <Esc>              close the explorer while focused
+  <leader>e then a   add a file (end with / for a directory)
+  <leader>xa         create a file relative to the current file
+  <leader>xr         create a file relative to the project root
+  <leader>xx         Secfile menu (create/rename/copy/delete/info)
+  <C-v> / <C-s>      in the picker: vertical / horizontal split
+  <C-t>              in the picker: new tab
+
+==============================================================================
+Search and pickers                                  *secvim-pickers*
+                                                    *secvim-search*
+
+  <C-p>, <leader>ff, <leader><space>   find files
+  <leader>fg          git files
+  <leader>fr          recent files
+  <leader>sg          live grep
+  <leader>/           buffer lines
+  <leader>sk          search keymaps
+  <leader>sd          diagnostics
+  <leader>ss          document symbols
+  <leader>sS          workspace symbols
+  <leader>?           full keybindings reference
+
+==============================================================================
+tmux                                                *secvim-tmux*
+                                                    *secvim-panes*
+
+  Prefix is Ctrl+a. The bundled config frees Ctrl+b for Neovim's sidebar.
+
+  <C-h/j/k/l>        move between Neovim splits and tmux panes
+  <M-h/j/k/l>        resize Neovim splits / tmux panes
+  Ctrl+a |           split pane vertically
+  Ctrl+a -           split pane horizontally
+  Ctrl+a h/j/k/l     move panes
+  Ctrl+a H/J/K/L     resize panes
+  Ctrl+a x           close pane
+  Ctrl+a z           zoom / unzoom pane
+  Ctrl+a c           new tmux window
+  Ctrl+a & / X       close tmux window
+  Ctrl+a n / p       next / previous tmux window
+  Ctrl+a s           session / window picker
+  Ctrl+a ( / )       previous / next session
+  Ctrl+a [           copy mode (v select, y yank, Ctrl+v block)
+  Ctrl+a r           reload tmux config
+
+  The tmux config is sec_bin/tmux.conf, symlinked to ~/.tmux.conf.
+
+==============================================================================
+macOS                                               *secvim-macos*
+
+  Cmd shortcuts do not reach terminal Neovim; use Ctrl/Alt/F-keys.
+
+  Option as Meta, needed for <M-h/j/k/l>:
+    Terminal.app  Settings > Profiles > Keyboard > Use Option as Meta key
+    iTerm2        Settings > Profiles > Keys > Option key > Esc+
+    Ghostty       macos-option-as-alt = true
+    kitty         macos_option_as_alt yes
+    WezTerm       works by default
+
+  F1-F12 are media keys unless you enable:
+    System Settings > Keyboard > Keyboard Shortcuts > Function Keys >
+    Use F1, F2, etc. as standard function keys
+  Or press Fn+F1 ... Fn+F12.
+
+  Add `stty -ixon` to ~/.zshrc if Ctrl+S freezes the terminal.
+
+  Ctrl+Shift chords need the kitty keyboard protocol:
+    Ghostty, kitty, WezTerm. F1 is the command palette fallback.
+
+  Clipboard: Neovim unnamedplus uses pbcopy/pbpaste; tmux uses
+  set-clipboard on. Check :checkhealth provider if yanking fails.
+
+==============================================================================
+LSP, build, test, debug                             *secvim-workflow*
+                                                    *secvim-lsp*
+                                                    *secvim-build*
+
+  F2 / F12 / S-F12 / M-F12   rename / definition / references / peek
+  F8 / S-F8                  next / previous diagnostic
+  <leader>lh                 toggle inlay hints
+  F5 / S-F5                  debug start / stop
+  F9 / F10 / F11 / S-F11     breakpoint / step over / into / out
+  F7                         build project (SecBuild)
+  F6                         compile & run C/C++
+  <leader>nr / nf / na       Sectest nearest / file / all
+  <leader>kb                 SecBuild menu
+  <leader>kk                 SecKit project navigator
+
+==============================================================================
+More help                                           *secvim-more*
+
+  Full reference:  docs/manual/keybinds.md
+  Plugins:         docs/manual/plugins.md
+  Languages:       docs/manual/languages.md
+  Debugging:       docs/manual/debugging.md
+
+  :help secvim-daily      daily keys
+  :help secvim-layout     dev layout
+  :help secvim-sidebar    sidebar and files
+  :help secvim-pickers    search and pickers
+  :help secvim-tmux       tmux
+  :help secvim-macos      macOS terminal setup
+  :help secvim-workflow   LSP/build/test/debug
+
+ vim:tw=78:ts=8:noet:ft=help:norl:

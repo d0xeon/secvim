@@ -1,0 +1,18 @@
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+
+# Local tooling
+tags
+!doc/tags
+test.sh
+.luarc.json
+spell/
+
+# Local scratch / downloads
+/Untitled
+/soljson-latest.js
+
+# Logs
+*.log

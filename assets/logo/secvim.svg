@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="240" viewBox="0 0 840 240" role="img" aria-label="Secvim">
+  <defs>
+    <linearGradient id="secvim-accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eb6f92"/>
+      <stop offset="1" stop-color="#c4a7e7"/>
+    </linearGradient>
+  </defs>
+  <rect width="840" height="240" rx="28" fill="#191724"/>
+  <path d="M120 34 L196 62 V128 C196 168 166 194 120 210 C74 194 44 168 44 128 V62 Z"
+        fill="#1f1d2e" stroke="url(#secvim-accent)" stroke-width="8" stroke-linejoin="round"/>
+  <circle cx="120" cy="112" r="18" fill="none" stroke="#9ccfd8" stroke-width="8"/>
+  <path d="M120 130 V166" stroke="#9ccfd8" stroke-width="8" stroke-linecap="round"/>
+  <text x="244" y="132" font-family="'JetBrains Mono','SFMono-Regular',monospace"
+        font-size="92" font-weight="700" fill="#e0def4" letter-spacing="4">SECVIM</text>
+  <text x="248" y="174" font-family="'JetBrains Mono','SFMono-Regular',monospace"
+        font-size="19" font-weight="500" fill="#9ccfd8" letter-spacing="7">SECURITY RESEARCH IDE</text>
+</svg>
